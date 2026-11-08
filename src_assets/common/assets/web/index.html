@@ -21,49 +21,11 @@
       </ul>
       <a class="btn btn-danger" href="./troubleshooting#logs">View Logs</a>
     </div>
-    <!-- Version -->
+    <!-- Version: update checks are disabled until this fork publishes releases. -->
     <div class="card p-2 my-4">
       <div class="card-body" v-if="version">
-        <h2>Version {{version.version}}</h2>
-        <br>
-        <div v-if="loading">
-          {{ $t('index.loading_latest') }}
-        </div>
-        <div class="alert alert-success" v-if="buildVersionIsDirty">
-          {{ $t('index.version_dirty') }} 🌇
-        </div>
-        <div class="alert alert-info" v-if="installedVersionNotStable">
-          {{ $t('index.installed_version_not_stable') }}
-        </div>
-        <div v-else-if="(!preReleaseBuildAvailable || !notifyPreReleases) && !stableBuildAvailable && !buildVersionIsDirty">
-          <div class="alert alert-success">
-            {{ $t('index.version_latest') }}
-          </div>
-        </div>
-        <div v-if="notifyPreReleases && preReleaseBuildAvailable">
-          <div class="alert alert-warning">
-            <div class="d-flex justify-content-between">
-              <div class="my-2">
-                <p>{{ $t('index.new_pre_release') }}</p>
-              </div>
-              <a class="btn btn-success m-1" :href="preReleaseVersion.release.html_url" target="_blank">{{ $t('index.download') }}</a>
-            </div>
-            <pre><b>{{preReleaseVersion.release.name}}</b></pre>
-            <pre>{{preReleaseVersion.release.body}}</pre>
-          </div>
-        </div>
-        <div v-if="stableBuildAvailable">
-          <div class="alert alert-warning">
-            <div class="d-flex justify-content-between">
-              <div class="my-2">
-                <p>{{ $t('index.new_stable') }}</p>
-              </div>
-              <a class="btn btn-success m-1" :href="githubVersion.release.html_url" target="_blank">{{ $t('index.download') }}</a>
-            </div>
-            <h3>{{githubVersion.release.name}}</h3>
-            <pre>{{githubVersion.release.body}}</pre>
-          </div>
-        </div>
+        <h2>{{ $t('index.current_version') }} {{ version }}</h2>
+        <div class="alert alert-info mt-3 mb-0">{{ $t('index.updates_disabled') }}</div>
       </div>
     </div>
     <!-- Resources -->
@@ -80,7 +42,6 @@
   import Navbar from './Navbar.vue'
   import ClientCard from './ClientCard.vue'
   import ResourceCard from './ResourceCard.vue'
-  import ApolloVersion from './apollo_version'
 
   console.log("Hello, Apollo!")
   let app = createApp({
@@ -92,25 +53,13 @@
     data() {
       return {
         version: null,
-        githubVersion: null,
-        notifyPreReleases: false,
-        preReleaseVersion: null,
-        loading: true,
         logs: null,
       }
     },
     async created() {
       try {
         let config = await fetch("./api/config").then((r) => r.json());
-        this.notifyPreReleases = config.notify_pre_releases;
-        this.version = new ApolloVersion(null, config.version);
-        console.log("Version: ", this.version.version)
-        this.githubVersion = new ApolloVersion(await fetch("https://api.github.com/repos/ClassicOldSong/Apollo/releases/latest").then((r) => r.json()), null);
-        console.log("GitHub Version: ", this.githubVersion.version)
-        if (this.githubVersion) {
-          this.preReleaseVersion = new ApolloVersion((await fetch("https://api.github.com/repos/ClassicOldSong/Apollo/releases").then((r) => r.json())).find(release => release.prerelease), null);
-          console.log("Pre-Release Version: ", this.preReleaseVersion.version)
-        }
+        this.version = config.version;
       } catch (e) {
         console.error(e);
       }
@@ -119,31 +68,8 @@
       } catch (e) {
         console.error(e);
       }
-      this.loading = false;
     },
     computed: {
-      installedVersionNotStable() {
-        if (!this.githubVersion || !this.version) {
-          return false;
-        }
-        return this.version.isGreater(this.githubVersion);
-      },
-      stableBuildAvailable() {
-        if (!this.githubVersion || !this.version) {
-          return false;
-        }
-        return this.githubVersion.isGreater(this.version);
-      },
-      preReleaseBuildAvailable() {
-        if (!this.preReleaseVersion || !this.githubVersion || !this.version) {
-          return false;
-        }
-        return this.preReleaseVersion.isGreater(this.version, true) && this.preReleaseVersion.isGreater(this.githubVersion, true);
-      },
-      buildVersionIsDirty() {
-        return this.version.version?.split(".").length === 5 &&
-          this.version.version.indexOf("dirty") !== -1
-      },
       /** Parse the text errors, calculating the text, the timestamp and the level */
       fancyLogs() {
         if (!this.logs) return [];

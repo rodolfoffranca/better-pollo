@@ -465,6 +465,11 @@
     "wan_encryption_mode_1": "Enabled for supported clients (default)",
     "wan_encryption_mode_2": "Required for all clients",
     "wan_encryption_mode_desc": "This determines when encryption will be used when streaming over the Internet. Encryption can reduce streaming performance, particularly on less powerful hosts and clients.",
+    "steam_force_resolution": "Force session resolution in Steam games",
+    "steam_force_resolution_desc": "Global Windows setting. Passes the effective session resolution as launch arguments through Steam. Applies to new launches; does not change running games or saved Steam launch options. Games must support the arguments.",
+    "steam_resolution_profile": "Resolution argument profile",
+    "steam_resolution_auto": "Automatic engine detection (recommended)",
+    "steam_resolution_profile_desc": "Automatic mode recognizes Unity, Unreal and Source from installed files; unrecognized games launch without extra arguments. A manual profile applies the same arguments to all Steam games. No per-game setup is required.",
     "steam_enabled": "Enable Steam Integration",
     "steam_enabled_desc": "Enables local Steam library discovery, synchronization, and launch support.",
     "steam_auto_sync": "Automatic Background Sync",
@@ -490,6 +495,8 @@
     "save_password": "Remember Password"
   },
   "index": {
+    "updates_disabled": "Update checks are temporarily disabled in Better Pollo until this fork publishes its own releases. The original repository is not queried.",
+    "current_version": "Installed version",
     "description": "Apollo is a self-hosted game stream host for Moonlight.",
     "download": "Download",
     "installed_version_not_stable": "You are running a pre-release version of Apollo. You may experience bugs or other issues. Please report any issues you encounter. Thank you for helping to make Apollo a better software!",

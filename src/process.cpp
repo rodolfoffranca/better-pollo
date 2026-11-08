@@ -32,6 +32,8 @@
 #include "platform/common.h"
 #include "process.h"
 #include "httpcommon.h"
+#include "steam_integration.h"
+#include "steam_resolution.h"
 #include "system_tray.h"
 #include "utility.h"
 #include "video.h"
@@ -489,8 +491,34 @@ namespace proc {
       BOOST_LOG(info) << "No commands configured, showing desktop..."sv;
       placebo = true;
     } else {
+      auto launch_command = _app.cmd;
+#ifdef _WIN32
+      if (config::steam.enabled && config::steam.force_resolution && !_app.steam_id.empty()) {
+        const auto profile = config::steam.resolution_profile == "auto" ?
+                               platf::steam::resolution::detect_profile(_app.steam_install_dir) :
+                               config::steam.resolution_profile;
+        const auto arguments = platf::steam::resolution::arguments(profile, render_width, render_height);
+        std::filesystem::path steam_executable;
+        for (const auto &root : platf::steam::default_library_roots()) {
+          std::error_code error;
+          if (std::filesystem::is_regular_file(root / "steam.exe", error)) {
+            steam_executable = root / "steam.exe";
+            break;
+          }
+        }
+        const auto command = platf::steam::resolution::launch_command(steam_executable, _app.steam_id, arguments);
+        if (!command.empty()) {
+          launch_command = command;
+          BOOST_LOG(info) << "Steam resolution: app " << _app.steam_id << ", profile " << profile
+                          << ", session " << render_width << "x" << render_height << ", arguments [" << arguments << "]";
+        } else {
+          BOOST_LOG(warning) << "Steam resolution: no supported engine or Steam executable found for app "
+                             << _app.steam_id << "; retaining its configured launch command.";
+        }
+      }
+#endif
       boost::filesystem::path working_dir = _app.working_dir.empty() ?
-                                              find_working_directory(_app.cmd, _env) :
+                                              find_working_directory(launch_command, _env) :
                                               boost::filesystem::path(_app.working_dir);
       if (!_app.steam_id.empty() && !_app.steam_install_dir.empty()) {
         _steam_tracker.clear();
@@ -507,8 +535,8 @@ namespace proc {
                            << _app.steam_install_dir << "]";
         }
       }
-      BOOST_LOG(info) << "Executing: ["sv << _app.cmd << "] in ["sv << working_dir << ']';
-      _process = platf::run_command(_app.elevated, true, _app.cmd, working_dir, _env, _pipe.get(), ec, &_process_group);
+      BOOST_LOG(info) << "Executing: ["sv << launch_command << "] in ["sv << working_dir << ']';
+      _process = platf::run_command(_app.elevated, true, launch_command, working_dir, _env, _pipe.get(), ec, &_process_group);
       if (ec) {
         BOOST_LOG(warning) << "Couldn't run ["sv << _app.cmd << "]: System: "sv << ec.message();
         return -1;

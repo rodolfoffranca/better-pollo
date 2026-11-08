@@ -221,13 +221,7 @@ onMounted(() => {
               default="true"
     ></Checkbox>
 
-    <!-- Notify Pre-Releases -->
-    <Checkbox class="mb-3"
-              id="notify_pre_releases"
-              locale-prefix="config"
-              v-model="config.notify_pre_releases"
-              default="false"
-    ></Checkbox>
+    <div class="alert alert-info">{{ $t('index.updates_disabled') }}</div>
 
     <!-- Enable system tray -->
     <Checkbox class="mb-3"

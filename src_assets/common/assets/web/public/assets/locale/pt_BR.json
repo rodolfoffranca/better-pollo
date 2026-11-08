@@ -425,6 +425,11 @@
     "wan_encryption_mode_1": "Ativado para clientes compatíveis (padrão)",
     "wan_encryption_mode_2": "Necessário para todos os clientes",
     "wan_encryption_mode_desc": "Isso determina quando a criptografia será usada durante a transmissão pela Internet. A criptografia pode reduzir o desempenho da transmissão, principalmente em servidores e clientes menos potentes.",
+    "steam_force_resolution": "Forçar resolução da sessão nos jogos Steam",
+    "steam_force_resolution_desc": "Opção global para Windows. Passa a resolução efetiva da sessão como argumentos ao iniciar jogos pela Steam. Vale para novas inicializações; não altera jogos já abertos nem as opções salvas na Steam. O jogo precisa aceitar os argumentos.",
+    "steam_resolution_profile": "Perfil de argumentos de resolução",
+    "steam_resolution_auto": "Automático por motor (recomendado)",
+    "steam_resolution_profile_desc": "O modo automático reconhece Unity, Unreal e Source pelos arquivos instalados; jogos não reconhecidos iniciam sem argumentos extras. Um perfil manual aplica os mesmos argumentos a todos os jogos Steam. Nenhum cadastro por jogo é necessário.",
     "steam_enabled": "Habilitar Integração com a Steam",
     "steam_enabled_desc": "Habilita descoberta de biblioteca, sincronização e inicialização de jogos locais da Steam.",
     "steam_auto_sync": "Sincronização Automática em Segundo Plano",
@@ -450,6 +455,8 @@
     "save_password": "Lembrar senha"
   },
   "index": {
+    "updates_disabled": "A verificação de atualizações está temporariamente desativada no Better Pollo até a publicação de releases próprias. Nenhuma consulta é feita ao repositório original.",
+    "current_version": "Versão instalada",
     "description": "O Apollo é um servidor de transmissão de jogos auto-hospedado para o Moonlight.",
     "download": "Baixar",
     "installed_version_not_stable": "Você está executando uma versão de pré-lançamento do Apollo. É possível que você encontre bugs ou outros problemas. Informe todos os problemas que encontrar. Obrigado por ajudar a tornar o Apollo um software melhor!",

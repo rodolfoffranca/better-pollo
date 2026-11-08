@@ -48,6 +48,25 @@ async function forceSync() {
               default="false"
     ></Checkbox>
 
+    <div v-if="platform === 'windows'">
+      <Checkbox class="mb-3"
+                id="steam_force_resolution"
+                locale-prefix="config"
+                v-model="config.steam_force_resolution"
+                default="false"
+      ></Checkbox>
+      <div class="mb-3" v-if="config.steam_force_resolution === 'enabled' || config.steam_force_resolution === true">
+        <label for="steam_resolution_profile" class="form-label">{{ $t('config.steam_resolution_profile') }}</label>
+        <select id="steam_resolution_profile" class="form-select" v-model="config.steam_resolution_profile">
+          <option value="auto">{{ $t('config.steam_resolution_auto') }}</option>
+          <option value="unity">Unity</option>
+          <option value="unreal">Unreal Engine</option>
+          <option value="source">Source / Source 2</option>
+        </select>
+        <div class="form-text">{{ $t('config.steam_resolution_profile_desc') }}</div>
+      </div>
+    </div>
+
     <!-- Steam Auto Sync -->
     <Checkbox class="mb-3"
               id="steam_auto_sync"

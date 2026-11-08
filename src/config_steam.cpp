@@ -1,10 +1,12 @@
 #include "config_steam.h"
 
 #include "config.h"
+#include "steam_resolution.h"
 #ifndef SUNSHINE_TESTS
   #include "confighttp.h"
   #include "file_handler.h"
   #include "platform/common.h"
+  #include "process.h"
   #include "steam_artwork.h"
   #include "steam_auto_sync.h"
   #include "steam_integration.h"
@@ -118,6 +120,11 @@ namespace config {
     steam_t result;
     consume(vars, "steam_enabled", result.enabled);
     consume(vars, "steam_auto_sync", result.auto_sync);
+    consume(vars, "steam_force_resolution", result.force_resolution);
+    const auto resolution_profile = take(vars, "steam_resolution_profile");
+    if (platf::steam::resolution::valid_profile(resolution_profile)) {
+      result.resolution_profile = resolution_profile;
+    }
     consume(vars, "steam_sync_all_installed", result.sync_all_installed);
     consume(vars, "steam_recent_games", result.recent_games);
     consume(vars, "steam_recent_max_age_days", result.recent_max_age_days);
@@ -132,6 +139,9 @@ namespace config {
   }
 
   void apply_steam(std::unordered_map<std::string, std::string> &vars) {
+#ifndef SUNSHINE_TESTS
+    std::lock_guard lock {proc::mutex()};
+#endif
     steam = parse_steam(vars);
 #ifndef SUNSHINE_TESTS
     platf::steam::autosync::configure({

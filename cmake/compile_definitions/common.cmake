@@ -154,6 +154,8 @@ set(SUNSHINE_TARGET_FILES
         "${CMAKE_SOURCE_DIR}/src/steam_auto_sync_policy.h"
         "${CMAKE_SOURCE_DIR}/src/steam_integration.cpp"
         "${CMAKE_SOURCE_DIR}/src/steam_integration.h"
+        "${CMAKE_SOURCE_DIR}/src/steam_resolution.cpp"
+        "${CMAKE_SOURCE_DIR}/src/steam_resolution.h"
         "${CMAKE_SOURCE_DIR}/src/steam_process_tracker.cpp"
         "${CMAKE_SOURCE_DIR}/src/steam_process_tracker.h"
         "${CMAKE_SOURCE_DIR}/src/steam_sync_policy.cpp"

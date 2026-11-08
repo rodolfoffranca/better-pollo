@@ -1,5 +1,7 @@
 # Better Pollo
 
+Versão atual: **0.1.0**.
+
 Fork do [Apollo](https://github.com/ClassicOldSong/Apollo) com sincronização da biblioteca Steam, melhorias de estabilidade e documentação em português brasileiro.
 
 O Better Pollo transmite a área de trabalho e jogos do seu computador para clientes como o [Artemis](https://github.com/ClassicOldSong/moonlight-android). Ele mantém os recursos do Apollo, incluindo monitor virtual com SudoVDA, permissões por dispositivo e codificação de vídeo por hardware.
@@ -14,6 +16,7 @@ Este fork é mantido por [rodolfoffranca](https://github.com/rodolfoffranca). Su
 - Filtros de exclusão e opção para incluir ferramentas da Steam.
 - Importação e preparação de capas compatíveis com os clientes.
 - Acompanhamento dos processos dos jogos Steam para gerenciar o fim da sessão.
+- Opção global na aba Steam para passar a resolução da sessão aos jogos, com detecção automática de Unity, Unreal e Source ou seleção manual do perfil.
 - Atualização da biblioteca sem substituir o gerenciador de processos nem apagar o estado da sessão e do monitor virtual.
 - Proteção de acessos simultâneos à biblioteca e ao ciclo de execução dos aplicativos.
 - Empacotamento completo do SudoVDA, com verificação dos arquivos necessários antes da instalação do driver.
@@ -50,6 +53,24 @@ A descoberta usa a instalação e os arquivos locais da Steam. Não é necessár
 A remoção automática atua sobre entradas gerenciadas pela sincronização; os atalhos adicionados manualmente mantêm suas configurações de inicialização. No modo de jogos recentes, um título pode sair da lista quando deixa de atender aos filtros, mesmo continuando instalado.
 
 ## Monitor virtual e SudoVDA
+
+### Forçar a resolução nos jogos Steam
+
+No Windows, acesse **Configurações → Steam**, habilite **Forçar resolução da sessão nos jogos Steam**, mantenha **Automático por motor** e salve. A opção é geral: não exige configurar cada jogo ou sincronizar a biblioteca novamente. Ela vale para os jogos com identificação Steam iniciados pelo Better Pollo.
+
+Em cada nova inicialização, o Better Pollo utiliza a resolução efetiva da sessão, incluindo a escala configurada, e envia os argumentos ao jogo por meio de `steam.exe -applaunch`. As opções salvas na Steam não são modificadas. Uma sessão de 2560 × 1600, por exemplo, recebe os seguintes argumentos conforme o motor:
+
+| Perfil | Argumentos |
+| --- | --- |
+| Unity | `-screen-width 2560 -screen-height 1600` |
+| Unreal Engine | `-ResX=2560 -ResY=1600 -ForceRes` |
+| Source / Source 2 | `-w 2560 -h 1600` |
+
+O modo automático identifica o motor pelos arquivos instalados. Se não conseguir reconhecê-lo, mantém o comando de inicialização e informa isso no log. Um perfil manual aplica os mesmos argumentos a todos os jogos Steam, então escolha essa alternativa apenas quando ela for adequada à sua biblioteca.
+
+O jogo precisa aceitar os argumentos de resolução. Jogos já abertos, iniciados fora do Better Pollo ou que ignoram esses parâmetros não são redimensionados por essa opção. A resolução do monitor virtual continua sendo configurada separadamente pelo Apollo.
+
+### Driver do monitor virtual
 
 O monitor virtual acompanha a resolução e a taxa de atualização solicitadas pelo cliente. Isso configura o monitor da sessão; a resolução interna de cada jogo ainda depende das opções do próprio jogo.
 
@@ -111,10 +132,13 @@ Os testes de regressão estão em [test_process_catalog.cpp](tests/unit/test_pro
 
 ## Próximas melhorias em avaliação
 
-- Argumentos de inicialização por jogo, preenchidos com a resolução da sessão quando o jogo oferecer suporte.
 - Sincronização dos jogos instalados da Battle.net.
 
-Esses dois recursos ainda não estão implementados nesta versão.
+Essa integração ainda não está implementada nesta versão. A resolução dos jogos Steam é configurada de forma global na aba Steam.
+
+## Atualizações
+
+A verificação automática de atualizações está temporariamente desativada na versão 0.1.0. A interface mostra a versão instalada sem consultar as releases do Apollo original e sem afirmar que esta é a versão mais recente disponível. A opção de notificar pré-lançamentos também foi retirada da interface enquanto a verificação estiver desativada.
 
 ## Créditos e projetos de origem
 

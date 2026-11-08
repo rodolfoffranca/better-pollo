@@ -75,6 +75,8 @@ namespace confighttp {
         exclusions.push_back({{"id", entry.id}, {"name", entry.name}});
       }
       nlohmann::json out {{"status", true}, {"provider", "steam"}, {"enabled", config::steam.enabled}, {"forced", false}, {"available", provider_available}, {"game_count", found.size()}, {"importable_game_count", filtered.size()}, {"tool_game_count", found.size() - all_importable.size()}, {"excluded_game_count", all_importable.size() - all_filtered.size()}, {"selected_game_count", selected_importable.size()}, {"exclude_games", std::move(exclusions)}, {"auto_sync", config::steam.auto_sync}, {"sync_all_installed", config::steam.sync_all_installed}, {"recent_games", config::steam.recent_games}, {"recent_max_age_days", config::steam.recent_max_age_days}, {"autosync_remove_uninstalled", config::steam.autosync_remove_uninstalled}, {"include_tools", config::steam.include_tools}};
+      out["force_resolution"] = config::steam.force_resolution;
+      out["resolution_profile"] = config::steam.resolution_profile;
 #if defined(__linux__)
       out["forced"] = true;
       out["playnite_available"] = false;
