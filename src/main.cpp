@@ -18,6 +18,7 @@
 #include "main.h"
 #include "nvhttp.h"
 #include "process.h"
+#include "steam_auto_sync.h"
 #include "system_tray.h"
 #include "upnp.h"
 #include "uuid.h"
@@ -431,6 +432,11 @@ int main(int argc, char *argv[]) {
   std::thread configThread {confighttp::start};
   std::thread rtspThread {rtsp_stream::start};
 
+  platf::steam::autosync::start();
+  auto steam_autosync_guard = util::fail_guard([]() {
+    platf::steam::autosync::stop();
+  });
+
 #ifdef _WIN32
   // If we're using the default port and GameStream is enabled, warn the user
   if (config::sunshine.port == 47989 && is_gamestream_enabled()) {
@@ -457,6 +463,9 @@ int main(int argc, char *argv[]) {
 
   // Wait for shutdown, this is not necessary when we're using the main event loop
   shutdown_event->view();
+
+  platf::steam::autosync::stop();
+  steam_autosync_guard.disable();
 
   httpThread.join();
   configThread.join();

@@ -180,6 +180,20 @@ namespace http {
     return 0;
   }
 
+  bool configure_curl_tls(CURL *curl) {
+    if (!curl) {
+      return false;
+    }
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+#ifdef _WIN32
+  #if defined(CURLOPT_SSL_OPTIONS) && defined(CURLSSLOPT_NATIVE_CA)
+    curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+  #endif
+#endif
+    return true;
+  }
+
   bool download_file(const std::string &url, const std::string &file, long ssl_version) {
     // sonar complains about weak ssl and tls versions; however sonar cannot detect the fix
     CURL *curl = curl_easy_init();  // NOSONAR

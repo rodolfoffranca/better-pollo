@@ -881,6 +881,7 @@ namespace nvhttp {
 
   template<class T>
   void serverinfo(std::shared_ptr<typename SimpleWeb::ServerBase<T>::Response> response, std::shared_ptr<typename SimpleWeb::ServerBase<T>::Request> request) {
+    std::lock_guard lock {proc::mutex()};
     print_req<T>(request);
 
     int pair_status = 0;
@@ -1067,6 +1068,7 @@ namespace nvhttp {
   }
 
   void applist(resp_https_t response, req_https_t request) {
+    std::lock_guard lock {proc::mutex()};
     print_req<SunshineHTTPS>(request);
 
     pt::ptree tree;
@@ -1149,6 +1151,7 @@ namespace nvhttp {
   }
 
   void launch(bool &host_audio, resp_https_t response, req_https_t request) {
+    std::lock_guard lock {proc::mutex()};
     print_req<SunshineHTTPS>(request);
 
     pt::ptree tree;
@@ -1346,6 +1349,7 @@ namespace nvhttp {
   }
 
   void resume(bool &host_audio, resp_https_t response, req_https_t request) {
+    std::lock_guard lock {proc::mutex()};
     print_req<SunshineHTTPS>(request);
 
     pt::ptree tree;
@@ -1457,6 +1461,7 @@ namespace nvhttp {
   }
 
   void cancel(resp_https_t response, req_https_t request) {
+    std::lock_guard lock {proc::mutex()};
     print_req<SunshineHTTPS>(request);
 
     pt::ptree tree;

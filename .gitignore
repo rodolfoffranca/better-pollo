@@ -28,6 +28,8 @@
 
 # Executables
 *.exe
+!src_assets/windows/drivers/sudovda/SudoVDA.dll
+!src_assets/windows/drivers/sudovda/nefconc.exe
 *.out
 *.app
 

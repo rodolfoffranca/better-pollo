@@ -48,6 +48,34 @@ elseif(UNIX)
     endif()
 endif()
 
+if(WIN32)
+    set(_steam_artwork_library_suffixes "${CMAKE_FIND_LIBRARY_SUFFIXES}")
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a .lib)
+    foreach(_artwork_library_cache IN ITEMS
+            PNG_LIBRARY_RELEASE PNG_LIBRARY_DEBUG
+            JPEG_LIBRARY_RELEASE JPEG_LIBRARY_DEBUG STEAM_ARTWORK_WEBP_LIBRARY)
+        if("${${_artwork_library_cache}}" MATCHES "\\.dll\\.a$")
+            unset(${_artwork_library_cache} CACHE)
+            unset(${_artwork_library_cache})
+        endif()
+    endforeach()
+    unset(_artwork_library_cache)
+    find_package(PNG REQUIRED)
+    find_package(JPEG REQUIRED)
+    find_library(STEAM_ARTWORK_WEBP_LIBRARY NAMES webp REQUIRED)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES "${_steam_artwork_library_suffixes}")
+    unset(_steam_artwork_library_suffixes)
+else()
+    find_package(PNG QUIET)
+    find_package(JPEG QUIET)
+    find_library(STEAM_ARTWORK_WEBP_LIBRARY NAMES webp)
+endif()
+if(PNG_FOUND AND JPEG_FOUND AND STEAM_ARTWORK_WEBP_LIBRARY)
+    list(APPEND SUNSHINE_DEFINITIONS VIBEPOLLO_STEAM_ARTWORK_IMAGE_LIBS=1)
+    list(APPEND SUNSHINE_EXTERNAL_LIBRARIES PNG::PNG JPEG::JPEG ${STEAM_ARTWORK_WEBP_LIBRARY})
+endif()
+list(APPEND SUNSHINE_DEFINITIONS SUNSHINE_STEAM_ARTWORK_NETWORK=1)
+
 include_directories(BEFORE SYSTEM "${CMAKE_SOURCE_DIR}/third-party/nv-codec-headers/include")
 file(GLOB NVENC_SOURCES CONFIGURE_DEPENDS "src/nvenc/*.cpp" "src/nvenc/*.h")
 list(APPEND PLATFORM_TARGET_FILES ${NVENC_SOURCES})
@@ -114,6 +142,22 @@ set(SUNSHINE_TARGET_FILES
         "${CMAKE_SOURCE_DIR}/src/stat_trackers.cpp"
         "${CMAKE_SOURCE_DIR}/src/rswrapper.h"
         "${CMAKE_SOURCE_DIR}/src/rswrapper.c"
+        "${CMAKE_SOURCE_DIR}/src/config_steam.cpp"
+        "${CMAKE_SOURCE_DIR}/src/config_steam.h"
+        "${CMAKE_SOURCE_DIR}/src/confighttp_steam.cpp"
+        "${CMAKE_SOURCE_DIR}/src/file_clock.h"
+        "${CMAKE_SOURCE_DIR}/src/steam_artwork.cpp"
+        "${CMAKE_SOURCE_DIR}/src/steam_artwork.h"
+        "${CMAKE_SOURCE_DIR}/src/steam_auto_sync.cpp"
+        "${CMAKE_SOURCE_DIR}/src/steam_auto_sync.h"
+        "${CMAKE_SOURCE_DIR}/src/steam_auto_sync_policy.cpp"
+        "${CMAKE_SOURCE_DIR}/src/steam_auto_sync_policy.h"
+        "${CMAKE_SOURCE_DIR}/src/steam_integration.cpp"
+        "${CMAKE_SOURCE_DIR}/src/steam_integration.h"
+        "${CMAKE_SOURCE_DIR}/src/steam_process_tracker.cpp"
+        "${CMAKE_SOURCE_DIR}/src/steam_process_tracker.h"
+        "${CMAKE_SOURCE_DIR}/src/steam_sync_policy.cpp"
+        "${CMAKE_SOURCE_DIR}/src/steam_sync_policy.h"
         ${PLATFORM_TARGET_FILES})
 
 if(NOT SUNSHINE_ASSETS_DIR_DEF)

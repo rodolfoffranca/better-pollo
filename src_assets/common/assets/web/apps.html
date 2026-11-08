@@ -126,7 +126,12 @@
             @dragend="onDragEnd()"
             @drop="onDrop($event, app, i)"
           >
-            <td @dblclick="exportLauncherFile(app)">{{app.name || ' '}}</td>
+            <td @dblclick="exportLauncherFile(app)">
+              {{app.name || ' '}}
+              <span v-if="app['steam-id']" class="badge bg-secondary ms-2" :title="'Steam App ID: ' + app['steam-id']">
+                <i class="fab fa-steam"></i> Steam
+              </span>
+            </td>
             <td v-if="app.uuid" class="text-end">
               <button class="btn btn-primary me-1" :disabled="actionDisabled" @click="editApp(app)">
                 <i class="fas fa-edit"></i>
@@ -148,6 +153,9 @@
       <div class="mt-2">
         <button class="btn btn-primary" @click="newApp" :disabled="actionDisabled">
           <i class="fas fa-plus"></i> {{ $t('apps.add_new') }}
+        </button>
+        <button class="btn btn-outline-info ms-2" @click="syncSteam" :disabled="actionDisabled || steamSyncing">
+          <i class="fab fa-steam me-1" :class="{'fa-spin': steamSyncing}"></i> {{ steamSyncing ? ($t('apps.steam_syncing') || 'Sincronizando...') : ($t('apps.sync_steam') || 'Sincronizar Steam') }}
         </button>
         <button class="btn btn-secondary float-end" @click="alphabetizeApps" :disabled="actionDisabled" v-if="!listReordered">
           <i class="fas fa-sort-alpha-up"></i> {{ $t('apps.alphabetize') }}
@@ -409,6 +417,12 @@
           <input type="range" step="1" min="20" max="200" class="form-range" id="resolutionScaleFactor" v-model="editForm['scale-factor']"/>
           <div class="form-text">{{ $t('apps.resolution_scale_factor_desc') }}</div>
         </div>
+        <!-- steam app id -->
+        <div class="mb-3">
+          <label for="steamId" class="form-label"><i class="fab fa-steam me-1"></i> Steam App ID</label>
+          <input type="text" class="form-control monospace" id="steamId" v-model="editForm['steam-id']" placeholder="Ex: 570" />
+          <div class="form-text">Associates this entry with a Steam game for tracking and artwork synchronization.</div>
+        </div>
         <div class="env-hint alert alert-info overflow-auto">
           <div class="form-text">
             <h4>{{ $t('apps.env_vars_about') }}</h4>
@@ -571,7 +585,8 @@
         draggingApp: -1,
         hostName: "",
         hostUUID: "",
-        listReordered: false
+        listReordered: false,
+        steamSyncing: false
       };
     },
     created() {
@@ -680,6 +695,29 @@
           this.actionDisabled = false;
         })
 
+      },
+      async syncSteam() {
+        this.steamSyncing = true;
+        try {
+          const res = await fetch("./api/steam/force_sync", {
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            method: 'POST',
+            body: JSON.stringify({})
+          });
+          const data = await res.json();
+          if (res.ok && data.status) {
+            await this.loadApps();
+          } else {
+            alert(data.error || 'Falha ao sincronizar biblioteca Steam');
+          }
+        } catch (e) {
+          alert('Erro de rede: ' + e.message);
+        } finally {
+          this.steamSyncing = false;
+        }
       },
       loadApps() {
         return fetch("./api/apps", {

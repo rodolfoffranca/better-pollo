@@ -104,7 +104,9 @@
     "resolution_scale_factor": "Fator de Escala da Resolução",
     "resolution_scale_factor_desc": "Escala a resolução solicitada pelo cliente baseada nesse fator. Por ex., 2000x1000 com um fator de 120% se tornará 2400x1200. Quando o valor é diferente de 100%, ignora o Fator de Escala de Resolução solicitado pelo cliente. Não afeta a resolução de transmissão solicitada pelo cliente.",
     "use_app_identity": "Usar a identidade do aplicativo",
-    "use_app_identity_desc": "Usa a própria identidade do aplicativo quando criando monitores virtuais ao invés da identidade do cliente. Isso é útil se você quer uma configuração de monitores para cada aplicativo individualmente."
+    "use_app_identity_desc": "Usa a própria identidade do aplicativo quando criando monitores virtuais ao invés da identidade do cliente. Isso é útil se você quer uma configuração de monitores para cada aplicativo individualmente.",
+    "sync_steam": "Sincronizar Steam",
+    "steam_syncing": "Sincronizando..."
   },
   "client_card": {
     "clients": "Clientes",
@@ -422,7 +424,27 @@
     "wan_encryption_mode": "Modo de criptografia WAN",
     "wan_encryption_mode_1": "Ativado para clientes compatíveis (padrão)",
     "wan_encryption_mode_2": "Necessário para todos os clientes",
-    "wan_encryption_mode_desc": "Isso determina quando a criptografia será usada durante a transmissão pela Internet. A criptografia pode reduzir o desempenho da transmissão, principalmente em servidores e clientes menos potentes."
+    "wan_encryption_mode_desc": "Isso determina quando a criptografia será usada durante a transmissão pela Internet. A criptografia pode reduzir o desempenho da transmissão, principalmente em servidores e clientes menos potentes.",
+    "steam_enabled": "Habilitar Integração com a Steam",
+    "steam_enabled_desc": "Habilita descoberta de biblioteca, sincronização e inicialização de jogos locais da Steam.",
+    "steam_auto_sync": "Sincronização Automática em Segundo Plano",
+    "steam_auto_sync_desc": "Verifica e sincroniza automaticamente os jogos instalados da Steam a cada 30 segundos em segundo plano.",
+    "steam_sync_all_installed": "Sincronizar Todos os Jogos Instalados",
+    "steam_sync_all_installed_desc": "Sincroniza todos os jogos instalados da Steam. Se desmarcado, a política de jogos recentes abaixo será utilizada.",
+    "steam_recent_games": "Quantidade de Jogos Recentes",
+    "steam_recent_games_desc": "Número máximo de jogos jogados recentemente para sincronizar quando 'Sincronizar Todos os Jogos Instalados' estiver desativado.",
+    "steam_recent_max_age_days": "Idade Máxima dos Jogos Recentes (Dias)",
+    "steam_recent_max_age_days_desc": "Exclui jogos que não tenham sido jogados dentro desta quantidade de dias (0 para sem limite).",
+    "steam_autosync_remove_uninstalled": "Remover Jogos Desinstalados",
+    "steam_autosync_remove_uninstalled_desc": "Remove automaticamente jogos gerenciados pela Steam do Apollo quando forem desinstalados da Steam.",
+    "steam_include_tools": "Incluir Ferramentas / Runtimes da Steam",
+    "steam_include_tools_desc": "Inclui ferramentas de compatibilidade, runtimes e servidores dedicados na descoberta da biblioteca.",
+    "steam_actions_title": "Sincronização da Biblioteca Steam",
+    "steam_actions_desc": "Dispara uma varredura imediata da biblioteca local da Steam e sincronização de capas/artes.",
+    "steam_sync_now": "Sincronizar Biblioteca Steam Agora",
+    "steam_syncing": "Sincronizando Biblioteca Steam...",
+    "steam_sync_success": "Biblioteca Steam sincronizada com sucesso!",
+    "steam_games_synced": "jogos sincronizados"
   },
   "login": {
     "save_password": "Lembrar senha"

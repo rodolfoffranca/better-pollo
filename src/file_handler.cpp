@@ -50,7 +50,7 @@ namespace file_handler {
     }
 
     out << contents;
-
-    return 0;
+    out.close();
+    return out.fail() ? -1 : 0;
   }
 }  // namespace file_handler

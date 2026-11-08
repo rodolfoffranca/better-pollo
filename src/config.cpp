@@ -20,6 +20,7 @@
 
 // local includes
 #include "config.h"
+#include "config_steam.h"
 #include "entry_handler.h"
 #include "file_handler.h"
 #include "logging.h"
@@ -1366,6 +1367,8 @@ namespace config {
         }
       }
     }
+
+    config::apply_steam(vars);
 
     auto it = vars.find("flags"s);
     if (it != std::end(vars)) {

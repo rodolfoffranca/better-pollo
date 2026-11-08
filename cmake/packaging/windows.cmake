@@ -26,6 +26,11 @@ install(TARGETS audio-info RUNTIME DESTINATION "tools" COMPONENT audio)
 install(TARGETS sunshinesvc RUNTIME DESTINATION "tools" COMPONENT application)
 
 # Drivers
+foreach(SUDOVDA_FILE SudoVDA.dll nefconc.exe SudoVDA.inf sudovda.cat sudovda.cer install.bat)
+    if(NOT EXISTS "${SUNSHINE_SOURCE_ASSETS_DIR}/windows/drivers/sudovda/${SUDOVDA_FILE}")
+        message(FATAL_ERROR "Incomplete SudoVDA package: missing ${SUDOVDA_FILE}")
+    endif()
+endforeach()
 install(DIRECTORY "${SUNSHINE_SOURCE_ASSETS_DIR}/windows/drivers/sudovda"
         DESTINATION "drivers"
         COMPONENT sudovda)

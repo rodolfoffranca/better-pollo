@@ -54,6 +54,11 @@ namespace proc {
 
   proc_t proc;
 
+  std::recursive_mutex &mutex() {
+    static std::recursive_mutex instance;
+    return instance;
+  }
+
   int input_only_app_id = -1;
   std::string input_only_app_id_str;
   int terminate_app_id = -1;
@@ -163,6 +168,7 @@ namespace proc {
   }
 
   void proc_t::launch_input_only() {
+    std::lock_guard lock {mutex()};
     _app_id = input_only_app_id;
     _app_name = "Remote Input";
     _app.uuid = REMOTE_INPUT_UUID;
@@ -176,6 +182,7 @@ namespace proc {
   }
 
   int proc_t::execute(const ctx_t& app, std::shared_ptr<rtsp_stream::launch_session_t> launch_session) {
+    std::lock_guard lock {mutex()};
     if (_app_id == input_only_app_id) {
       terminate(false, false);
       std::this_thread::sleep_for(1s);
@@ -485,6 +492,21 @@ namespace proc {
       boost::filesystem::path working_dir = _app.working_dir.empty() ?
                                               find_working_directory(_app.cmd, _env) :
                                               boost::filesystem::path(_app.working_dir);
+      if (!_app.steam_id.empty() && !_app.steam_install_dir.empty()) {
+        _steam_tracker.clear();
+        _steam_tracking_active = _steam_tracker.begin(_app.steam_install_dir);
+        _steam_tracking_associated = false;
+        _steam_tracking_deadline = std::chrono::steady_clock::now() + 15s;
+        _steam_last_tracking_poll = {};
+        if (!_steam_tracking_active) {
+          BOOST_LOG(warning) << "Steam app " << _app.steam_id
+                             << " could not capture a process baseline; continuing with untrackable detached behavior.";
+        } else {
+          BOOST_LOG(debug) << "Steam app " << _app.steam_id
+                           << " process baseline captured for install directory ["
+                           << _app.steam_install_dir << "]";
+        }
+      }
       BOOST_LOG(info) << "Executing: ["sv << _app.cmd << "] in ["sv << working_dir << ']';
       _process = platf::run_command(_app.elevated, true, _app.cmd, working_dir, _env, _pipe.get(), ec, &_process_group);
       if (ec) {
@@ -561,6 +583,7 @@ namespace proc {
   }
 
   int proc_t::running() {
+    std::lock_guard lock {mutex()};
 #ifndef _WIN32
     // On POSIX OSes, we must periodically wait for our children to avoid
     // them becoming zombies. This must be synchronized carefully with
@@ -570,6 +593,45 @@ namespace proc {
       while (waitpid(-1, nullptr, WNOHANG) > 0);
     });
 #endif
+
+    if (_steam_tracking_active) {
+      const auto now = std::chrono::steady_clock::now();
+      constexpr auto tracking_poll_interval = 100ms;
+      if (_steam_last_tracking_poll.time_since_epoch().count() == 0 || now - _steam_last_tracking_poll >= tracking_poll_interval) {
+        _steam_last_tracking_poll = now;
+        const auto tracking = _steam_tracker.finish();
+        if (tracking.associated()) {
+          if (!_steam_tracking_associated) {
+            BOOST_LOG(info) << "Steam app " << _app.steam_id
+                            << " associated with " << tracking.tree.processes.size()
+                            << " tracked process(es).";
+          }
+          _steam_tracking_associated = true;
+          placebo = false;
+        } else if (_steam_tracking_associated && tracking.reason.find("unavailable") == std::string::npos) {
+          _steam_tracking_associated = false;
+          _steam_tracking_active = false;
+          // A game we successfully tracked has exited. Do not turn it into
+          // an untrackable detached app and leave its virtual display alive.
+          terminate();
+          return 0;
+        }
+      }
+
+      if (_steam_tracking_associated) {
+        return _app_id;
+      }
+      if (now < _steam_tracking_deadline) {
+        return _app_id;
+      }
+
+      BOOST_LOG(warning) << "Steam app " << _app.steam_id
+                         << " process tree remained untrackable after the 15 second launch window;"
+                            " retaining detached streaming behavior.";
+      _steam_tracking_active = false;
+      placebo = true;
+      return _app_id;
+    }
 
     if (placebo) {
       return _app_id;
@@ -602,6 +664,7 @@ namespace proc {
   }
 
   void proc_t::resume() {
+    std::lock_guard lock {mutex()};
     BOOST_LOG(info) << "Session resuming for app [" << _app_name << "].";
 
     if (!_app.state_cmds.empty()) {
@@ -646,6 +709,7 @@ namespace proc {
   }
 
   void proc_t::pause() {
+    std::lock_guard lock {mutex()};
     if (!running()) {
       BOOST_LOG(info) << "Session already stopped, do not run pause commands.";
       return;
@@ -704,11 +768,37 @@ namespace proc {
   }
 
   void proc_t::terminate(bool immediate, bool needs_refresh) {
+    std::lock_guard lock {mutex()};
     std::error_code ec;
     placebo = false;
 
+    auto remaining_timeout = _app.exit_timeout;
+    if (!_steam_tracker.tree().empty()) {
+      if (!_steam_process_controller) {
+        _steam_process_controller = platf::steam::lifecycle::native_process_controller();
+      }
+      platf::steam::lifecycle::stop_options steam_stop_options;
+      steam_stop_options.grace_period = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::max(remaining_timeout, 0s)
+      );
+      const auto stopped = platf::steam::lifecycle::stop_tree(
+        _steam_tracker.tree(),
+        *_steam_process_controller,
+        steam_stop_options
+      );
+      BOOST_LOG(info) << "Steam tracked tree termination requested: TERM=" << stopped.terminate_sent
+                      << ", KILL=" << stopped.kill_sent << ", skipped=" << stopped.skipped
+                      << ", complete=" << (stopped.complete ? "yes" : "no");
+      remaining_timeout = 0s;
+    }
+    _steam_tracker.clear();
+    _steam_tracking_active = false;
+    _steam_tracking_associated = false;
+    _steam_tracking_deadline = {};
+    _steam_last_tracking_poll = {};
+
     if (!immediate) {
-      terminate_process_group(_process, _process_group, _app.exit_timeout);
+      terminate_process_group(_process, _process_group, remaining_timeout);
     }
 
     _process = boost::process::v1::child();
@@ -814,12 +904,21 @@ namespace proc {
     }
   }
 
-  const std::vector<ctx_t> &proc_t::get_apps() const {
+  std::vector<ctx_t> proc_t::get_apps() const {
+    std::lock_guard lock {mutex()};
     return _apps;
   }
 
-  std::vector<ctx_t> &proc_t::get_apps() {
-    return _apps;
+  bool proc_t::refresh_apps(const std::string &file_name) {
+    std::lock_guard lock {mutex()};
+    auto parsed = parse(file_name);
+    if (!parsed) {
+      return false;
+    }
+    // Updating the library must preserve the active process, launch session,
+    // display state and preparation-command iterators. Readers own snapshots.
+    _apps = std::move(parsed->_apps);
+    return true;
   }
 
   // Gets application image from application list.
@@ -827,6 +926,7 @@ namespace proc {
   // Returns default image if image configuration is not set.
   // Returns http content-type header compatible image type.
   std::string proc_t::get_app_image(int app_id) {
+    std::lock_guard lock {mutex()};
     auto iter = std::find_if(_apps.begin(), _apps.end(), [&app_id](const auto app) {
       return app.id == std::to_string(app_id);
     });
@@ -836,14 +936,17 @@ namespace proc {
   }
 
   std::string proc_t::get_last_run_app_name() {
+    std::lock_guard lock {mutex()};
     return _app_name;
   }
 
   std::string proc_t::get_running_app_uuid() {
+    std::lock_guard lock {mutex()};
     return _app.uuid;
   }
 
   boost::process::environment proc_t::get_env() {
+    std::lock_guard lock {mutex()};
     return _env;
   }
 
@@ -1228,6 +1331,7 @@ namespace proc {
   }
 
   std::optional<proc::proc_t> parse(const std::string &file_name) {
+    std::lock_guard lock {mutex()};
 
     // Prepare environment variables.
     auto this_env = boost::this_process::environment();
@@ -1361,6 +1465,12 @@ namespace proc {
           ctx.allow_client_commands = app_node.value("allow-client-commands", true);
           ctx.terminate_on_pause = app_node.value("terminate-on-pause", false);
           ctx.gamepad = app_node.value("gamepad", "");
+          if (app_node.contains("steam-id") && app_node["steam-id"].is_string()) {
+            ctx.steam_id = parse_env_val(this_env, app_node["steam-id"].get<std::string>());
+          }
+          if (app_node.contains("steam-install-dir") && app_node["steam-install-dir"].is_string()) {
+            ctx.steam_install_dir = parse_env_val(this_env, app_node["steam-install-dir"].get<std::string>());
+          }
 
           // Calculate a unique application id.
           auto possible_ids = calculate_app_id(name, ctx.image_path, i++);
@@ -1563,20 +1673,28 @@ namespace proc {
   }
 
   void refresh(const std::string &file_name, bool needs_terminate) {
+    std::lock_guard lock {mutex()};
     if (needs_terminate) {
       proc.terminate(false, false);
     }
 
   #ifdef _WIN32
-    size_t fail_count = 0;
-    while (fail_count < 5 && vDisplayDriverStatus != VDISPLAY::DRIVER_STATUS::OK) {
-      initVDisplayDriver();
-      if (vDisplayDriverStatus == VDISPLAY::DRIVER_STATUS::OK) {
-        break;
-      }
+    // Cleanup/catalog refreshes must not reopen the driver or start watchdogs.
+    // A missing driver otherwise adds repeated multi-second delays to shutdown.
+    if (needs_terminate) {
+      size_t fail_count = 0;
+      while (fail_count < 5 && vDisplayDriverStatus != VDISPLAY::DRIVER_STATUS::OK) {
+        initVDisplayDriver();
+        if (vDisplayDriverStatus == VDISPLAY::DRIVER_STATUS::OK) {
+          break;
+        }
 
-      fail_count += 1;
-      std::this_thread::sleep_for(1s);
+        fail_count += 1;
+        std::this_thread::sleep_for(1s);
+      }
+      if (vDisplayDriverStatus != VDISPLAY::DRIVER_STATUS::OK) {
+        BOOST_LOG(warning) << "SudoVDA is unavailable; check the virtual display driver installation.";
+      }
     }
   #endif
 

@@ -28,6 +28,8 @@
 #include "config.h"
 #include "platform/common.h"
 #include "rtsp.h"
+#include "steam_process_tracker.h"
+#include <mutex>
 #include "utility.h"
 
 #ifdef _WIN32
@@ -98,6 +100,8 @@ namespace proc {
     bool terminate_on_pause;
     int  scale_factor;
     std::chrono::seconds exit_timeout;
+    std::string steam_id;
+    std::string steam_install_dir;
   };
 
   class proc_t {
@@ -130,8 +134,8 @@ namespace proc {
 
     ~proc_t();
 
-    const std::vector<ctx_t> &get_apps() const;
-    std::vector<ctx_t> &get_apps();
+    std::vector<ctx_t> get_apps() const;
+    bool refresh_apps(const std::string &file_name);
     std::string get_app_image(int app_id);
     std::string get_last_run_app_name();
     std::string get_running_app_uuid();
@@ -159,6 +163,13 @@ namespace proc {
     boost::process::v1::child _process;
     boost::process::v1::group _process_group;
 
+    platf::steam::lifecycle::tracker _steam_tracker;
+    std::shared_ptr<platf::steam::lifecycle::process_controller> _steam_process_controller;
+    bool _steam_tracking_active {false};
+    bool _steam_tracking_associated {false};
+    std::chrono::steady_clock::time_point _steam_tracking_deadline {};
+    std::chrono::steady_clock::time_point _steam_last_tracking_poll {};
+
     file_t _pipe;
     std::vector<cmd_t>::const_iterator _app_prep_it;
     std::vector<cmd_t>::const_iterator _app_prep_begin;
@@ -174,6 +185,9 @@ namespace proc {
   std::tuple<std::string, std::string> calculate_app_id(const std::string &app_name, std::string app_image_path, int index);
 
   std::string validate_app_image_path(std::string app_image_path);
+  // Serializes catalog replacement with application/session lifecycle operations.
+  // Recursive because running() and terminate() may refresh the catalog.
+  std::recursive_mutex &mutex();
   void refresh(const std::string &file_name, bool needs_terminate = true);
   void migrate_apps(nlohmann::json* fileTree_p, nlohmann::json* inputTree_p);
   std::optional<proc::proc_t> parse(const std::string &file_name);

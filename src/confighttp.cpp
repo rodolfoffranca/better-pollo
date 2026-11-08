@@ -176,7 +176,7 @@ namespace confighttp {
    *
    * This function uses session cookies (if set) and ensures they have not expired.
    */
-  bool authenticate(resp_https_t response, req_https_t request, bool needsRedirect = false) {
+  bool authenticate(resp_https_t response, req_https_t request, bool needsRedirect) {
     if (!checkIPOrigin(response, request))
       return false;
     // If credentials not set, redirect to welcome.
@@ -236,7 +236,7 @@ namespace confighttp {
    * @param request The HTTP request object.
    * @param error_message The error message.
    */
-  void bad_request(resp_https_t response, [[maybe_unused]] req_https_t request, const std::string &error_message = "Bad Request") {
+  void bad_request(resp_https_t response, [[maybe_unused]] req_https_t request, const std::string &error_message) {
     constexpr SimpleWeb::StatusCode code = SimpleWeb::StatusCode::client_error_bad_request;
     nlohmann::json tree;
     tree["status_code"] = static_cast<int>(code);
@@ -283,8 +283,44 @@ namespace confighttp {
       return false;
     }
     return true;
+  }
 
-    return true;
+  std::recursive_mutex &apps_file_mutex() {
+    return proc::mutex();
+  }
+
+  static void sort_apps_by_name(nlohmann::json &file_tree) {
+    try {
+      if (!file_tree.contains("apps") || !file_tree["apps"].is_array()) {
+        return;
+      }
+      auto &apps_node = file_tree["apps"];
+      std::sort(apps_node.begin(), apps_node.end(), [](const nlohmann::json &a, const nlohmann::json &b) {
+        try {
+          return a.at("name").get<std::string>() < b.at("name").get<std::string>();
+        } catch (...) {
+          return false;
+        }
+      });
+    } catch (...) {}
+  }
+
+  bool refresh_client_apps_cache(nlohmann::json &file_tree, bool sort_by_name) {
+    std::lock_guard lock {apps_file_mutex()};
+    try {
+      if (sort_by_name) {
+        sort_apps_by_name(file_tree);
+      }
+      if (file_handler::write_file(config::stream.file_apps.c_str(), file_tree.dump(4)) != 0) {
+        return false;
+      }
+      return proc::proc.refresh_apps(config::stream.file_apps);
+    } catch (const std::exception &e) {
+      BOOST_LOG(warning) << "refresh_client_apps_cache: failed: " << e.what();
+    } catch (...) {
+      BOOST_LOG(warning) << "refresh_client_apps_cache: failed (unknown)";
+    }
+    return false;
   }
 
   /**
@@ -570,6 +606,7 @@ namespace confighttp {
    * @api_examples{/api/apps| GET| null}
    */
   void getApps(resp_https_t response, req_https_t request) {
+    std::lock_guard lock {apps_file_mutex()};
     if (!authenticate(response, request)) {
       return;
     }
@@ -625,6 +662,7 @@ namespace confighttp {
    * @api_examples{/api/apps| POST| {"name":"Hello, World!","uuid": "aaaa-bbbb"}}
    */
   void saveApp(resp_https_t response, req_https_t request) {
+    std::lock_guard lock {apps_file_mutex()};
     if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
       return;
     }
@@ -691,6 +729,7 @@ namespace confighttp {
    * @api_examples{/api/apps/reorder| POST| {"order": ["aaaa-bbbb", "cccc-dddd"]}}
    */
   void reorderApps(resp_https_t response, req_https_t request) {
+    std::lock_guard lock {apps_file_mutex()};
     if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
       return;
     }
@@ -805,6 +844,7 @@ namespace confighttp {
    * @api_examples{/api/apps/delete | POST| { uuid: 'aaaa-bbbb' }}
    */
   void deleteApp(resp_https_t response, req_https_t request) {
+    std::lock_guard lock {apps_file_mutex()};
     if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
       return;
     }
@@ -1070,6 +1110,10 @@ namespace confighttp {
         config_stream << k << " = " << (v.is_string() ? v.get<std::string>() : v.dump()) << std::endl;
       }
       file_handler::write_file(config::sunshine.config_file.c_str(), config_stream.str());
+      try {
+        auto vars = config::parse_config(config_stream.str());
+        config::apply_steam(vars);
+      } catch (...) {}
       output_tree["status"] = true;
       send_response(response, output_tree);
     } catch (std::exception &e) {
@@ -1377,6 +1421,7 @@ namespace confighttp {
    * @param request The HTTP request object.
    */
   void launchApp(resp_https_t response, req_https_t request) {
+    std::lock_guard lock {proc::mutex()};
     if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
       return;
     }
@@ -1553,6 +1598,10 @@ namespace confighttp {
     server.resource["^/api/clients/unpair$"]["POST"] = unpair;
     server.resource["^/api/clients/disconnect$"]["POST"] = disconnect;
     server.resource["^/api/covers/upload$"]["POST"] = uploadCover;
+    server.resource["^/api/steam/status$"]["GET"] = getSteamStatus;
+    server.resource["^/api/steam/games$"]["GET"] = getSteamGames;
+    server.resource["^/api/steam/force_sync$"]["POST"] = postSteamForceSync;
+    server.resource["^/api/steam/launch$"]["POST"] = postSteamLaunch;
     server.resource["^/images/apollo.ico$"]["GET"] = getFaviconImage;
     server.resource["^/images/logo-apollo-45.png$"]["GET"] = getApolloLogoImage;
     server.resource["^/assets\\/.+$"]["GET"] = getNodeModules;
