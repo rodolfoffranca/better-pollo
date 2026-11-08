@@ -1369,6 +1369,7 @@ namespace config {
     }
 
     config::apply_steam(vars);
+    config::apply_battlenet(vars);
 
     auto it = vars.find("flags"s);
     if (it != std::end(vars)) {

@@ -47,6 +47,8 @@ namespace confighttp {
   void getSteamGames(resp_https_t response, req_https_t request);
   void postSteamForceSync(resp_https_t response, req_https_t request);
   void postSteamLaunch(resp_https_t response, req_https_t request);
+  void getBattleNetStatus(resp_https_t response, req_https_t request);
+  void postBattleNetSync(resp_https_t response, req_https_t request);
 }  // namespace confighttp
 
 // mime types map

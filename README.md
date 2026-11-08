@@ -2,7 +2,7 @@
 
 Versão atual: **0.1.0**.
 
-Fork do [Apollo](https://github.com/ClassicOldSong/Apollo) com sincronização da biblioteca Steam, melhorias de estabilidade e documentação em português brasileiro.
+Fork do [Apollo](https://github.com/ClassicOldSong/Apollo) com sincronização das bibliotecas Steam e Battle.net, melhorias de estabilidade e documentação em português brasileiro.
 
 O Better Pollo transmite a área de trabalho e jogos do seu computador para clientes como o [Artemis](https://github.com/ClassicOldSong/moonlight-android). Ele mantém os recursos do Apollo, incluindo monitor virtual com SudoVDA, permissões por dispositivo e codificação de vídeo por hardware.
 
@@ -12,6 +12,8 @@ Este fork é mantido por [rodolfoffranca](https://github.com/rodolfoffranca). Su
 
 - Descoberta de jogos instalados nas bibliotecas locais da Steam.
 - Sincronização manual e automática da biblioteca com a lista de aplicativos do Apollo.
+- Integração nativa com a Battle.net no Windows: descoberta local, sincronização e abertura dos jogos pelo launcher, sem Playnite.
+- Aba **Biblioteca** com seções para cada provedor, incluindo Steam e Battle.net.
 - Seleção entre todos os jogos instalados ou apenas os jogos recentes.
 - Filtros de exclusão e opção para incluir ferramentas da Steam.
 - Importação e preparação de capas compatíveis com os clientes.
@@ -40,7 +42,7 @@ Para obter o código, use este repositório. Consulte a página de [Releases do 
 
 Com a Steam e os jogos instalados no computador host:
 
-1. Acesse **Configurações → Steam** na interface web.
+1. Acesse **Configurações → Biblioteca → Steam** na interface web.
 2. Ative **Habilitar Integração com a Steam**.
 3. Para acompanhar mudanças automaticamente, ative **Sincronização Automática em Segundo Plano**. A verificação ocorre a cada 30 segundos.
 4. Ative **Sincronizar Todos os Jogos Instalados** ou configure a quantidade e a idade máxima dos jogos recentes.
@@ -52,11 +54,23 @@ A descoberta usa a instalação e os arquivos locais da Steam. Não é necessár
 
 A remoção automática atua sobre entradas gerenciadas pela sincronização; os atalhos adicionados manualmente mantêm suas configurações de inicialização. No modo de jogos recentes, um título pode sair da lista quando deixa de atender aos filtros, mesmo continuando instalado.
 
+## Biblioteca Battle.net
+
+No Windows, acesse **Configurações → Biblioteca → Battle.net**, habilite a integração e salve. Use a sincronização manual ou ative a verificação automática, que ocorre a cada 30 segundos. Os jogos reconhecidos são adicionados à mesma lista de aplicativos enviada ao cliente.
+
+A descoberta lê o Registro do usuário conectado e da máquina, além de `product.db`, e confirma a presença dos executáveis dos jogos. Não requer Playnite, chave de API nem a senha da conta Blizzard. Dados incompletos não provocam a remoção de entradas existentes.
+
+Ao selecionar um jogo no cliente, o Better Pollo abre a Battle.net se necessário, aguarda sua inicialização e solicita a abertura do jogo. A tentativa de iniciar minimizada respeita a preferência nativa de bandeja do launcher, quando configurada. Login, atualizações e avisos ainda podem exigir interação.
+
+O tempo limite pode ser ajustado de 15 a 180 segundos. A espera ocorre em um processo auxiliar, mantendo o streaming disponível. O launcher fica fora do grupo da sessão; encerrar a sessão cancela a espera e encerra somente os processos de jogo identificados como novos naquela inicialização.
+
+Veja [os detalhes, configurações e limites da integração Battle.net](docs/battlenet.md).
+
 ## Monitor virtual e SudoVDA
 
 ### Forçar a resolução nos jogos Steam
 
-No Windows, acesse **Configurações → Steam**, habilite **Forçar resolução da sessão nos jogos Steam**, mantenha **Automático por motor** e salve. A opção é geral: não exige configurar cada jogo ou sincronizar a biblioteca novamente. Ela vale para os jogos com identificação Steam iniciados pelo Better Pollo.
+No Windows, acesse **Configurações → Biblioteca → Steam**, habilite **Forçar resolução da sessão nos jogos Steam**, mantenha **Automático por motor** e salve. A opção é geral: não exige configurar cada jogo ou sincronizar a biblioteca novamente. Ela vale para os jogos com identificação Steam iniciados pelo Better Pollo.
 
 Em cada nova inicialização, o Better Pollo utiliza a resolução efetiva da sessão, incluindo a escala configurada, e envia os argumentos ao jogo por meio de `steam.exe -applaunch`. As opções salvas na Steam não são modificadas. Uma sessão de 2560 × 1600, por exemplo, recebe os seguintes argumentos conforme o motor:
 
@@ -130,11 +144,9 @@ Esta versão foi verificada com:
 
 Os testes de regressão estão em [test_process_catalog.cpp](tests/unit/test_process_catalog.cpp) e integram a suíte GoogleTest da base, habilitada pela opção CMake `BUILD_TESTS`.
 
-## Próximas melhorias em avaliação
+## Provedores de bibliotecas
 
-- Sincronização dos jogos instalados da Battle.net.
-
-Essa integração ainda não está implementada nesta versão. A resolução dos jogos Steam é configurada de forma global na aba Steam.
+Steam e Battle.net têm configurações independentes dentro da aba **Biblioteca**. A opção de argumentos de resolução pertence à seção Steam; ela não é aplicada aos jogos Battle.net.
 
 ## Atualizações
 
@@ -150,6 +162,7 @@ A verificação automática de atualizações está temporariamente desativada n
 | [Artemis — ClassicOldSong e colaboradores](https://github.com/ClassicOldSong/moonlight-android) | Cliente com recursos integrados ao Apollo. |
 | SudoVDA — SudoMaker | Driver de monitor virtual utilizado pelo Apollo no Windows. Consulte a [procedência dos binários](src_assets/windows/drivers/sudovda/BINARIES.md). |
 | [Moonlight e colaboradores](https://github.com/moonlight-stream) | Ecossistema de clientes de streaming que faz parte da origem do projeto. |
+| [PlayniteExtensions — JosefNemec e colaboradores](https://github.com/JosefNemec/PlayniteExtensions) e [Lutris e colaboradores](https://github.com/lutris/lutris) | Referências públicas do formato local e dos identificadores de produtos Battle.net. A integração deste fork é nativa e não executa nem exige esses projetos. |
 
 Obrigado aos autores e colaboradores desses projetos. O Better Pollo é mantido de forma independente e não é uma distribuição oficial do Apollo, Sunshine ou Vibepollo. As marcas citadas pertencem aos respectivos titulares.
 

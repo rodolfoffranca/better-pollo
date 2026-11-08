@@ -14,6 +14,7 @@
 
 // local includes
 #include "config_steam.h"
+#include "config_battlenet.h"
 #include "nvenc/nvenc_config.h"
 
 namespace config {

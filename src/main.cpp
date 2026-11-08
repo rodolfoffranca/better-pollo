@@ -4,6 +4,7 @@
  */
 // standard includes
 #include <codecvt>
+#include <charconv>
 #include <csignal>
 #include <fstream>
 #include <iostream>
@@ -19,6 +20,7 @@
 #include "nvhttp.h"
 #include "process.h"
 #include "steam_auto_sync.h"
+#include "battlenet.h"
 #include "system_tray.h"
 #include "upnp.h"
 #include "uuid.h"
@@ -148,6 +150,19 @@ int main(int argc, char *argv[]) {
 
   setlocale(LC_ALL, "C");
 #endif
+
+  // A small interactive-user child owns launcher startup waits. It does not
+  // initialize the host, tray, encoders, configuration files or listening ports.
+  if (argc > 1 && std::string_view(argv[1]) == "--battlenet-launch") {
+    if (argc != 5) return 2;
+    const std::string_view raw_timeout(argv[3]), raw_minimized(argv[4]);
+    int timeout = 0;
+    const auto parsed = std::from_chars(raw_timeout.data(), raw_timeout.data() + raw_timeout.size(), timeout);
+    if (parsed.ec != std::errc {} || parsed.ptr != raw_timeout.data() + raw_timeout.size() ||
+        (raw_minimized != "0" && raw_minimized != "1")) return 2;
+    try { return platf::battlenet::launch_helper(argv[2], timeout, raw_minimized == "1"); }
+    catch (const std::exception &error) { std::cerr << "Battle.net launch failed: " << error.what() << '\n'; return 3; }
+  }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -433,8 +448,10 @@ int main(int argc, char *argv[]) {
   std::thread rtspThread {rtsp_stream::start};
 
   platf::steam::autosync::start();
+  platf::battlenet::autosync::start();
   auto steam_autosync_guard = util::fail_guard([]() {
     platf::steam::autosync::stop();
+    platf::battlenet::autosync::stop();
   });
 
 #ifdef _WIN32
@@ -465,6 +482,7 @@ int main(int argc, char *argv[]) {
   shutdown_event->view();
 
   platf::steam::autosync::stop();
+  platf::battlenet::autosync::stop();
   steam_autosync_guard.disable();
 
   httpThread.join();

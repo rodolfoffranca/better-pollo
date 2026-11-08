@@ -34,6 +34,7 @@
 #include "httpcommon.h"
 #include "steam_integration.h"
 #include "steam_resolution.h"
+#include "battlenet.h"
 #include "system_tray.h"
 #include "utility.h"
 #include "video.h"
@@ -493,6 +494,28 @@ namespace proc {
     } else {
       auto launch_command = _app.cmd;
 #ifdef _WIN32
+      if (!_app.battlenet_id.empty()) {
+        if (!config::battlenet.enabled) {
+          BOOST_LOG(error) << "Battle.net integration is disabled.";
+          return -1;
+        }
+        std::wstring executable(32768, L'\0');
+        const auto size = GetModuleFileNameW(nullptr, executable.data(), static_cast<DWORD>(executable.size()));
+        if (!size || size >= executable.size()) return -1;
+        executable.resize(size);
+        launch_command = platf::battlenet::helper_command(std::filesystem::path(executable), _app.battlenet_id,
+                                                          config::battlenet.launch_timeout, config::battlenet.start_minimized);
+        if (launch_command.empty()) return -1;
+        _app.auto_detach = false;
+        _app.wait_all = false;
+        // Cancellation must be able to kill the helper without closing Battle.net.
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits {};
+        if (!QueryInformationJobObject(_process_group.native_handle(), JobObjectExtendedLimitInformation,
+                                        &limits, sizeof(limits), nullptr)) return -1;
+        limits.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_BREAKAWAY_OK;
+        if (!SetInformationJobObject(_process_group.native_handle(), JobObjectExtendedLimitInformation,
+                                     &limits, sizeof(limits))) return -1;
+      }
       if (config::steam.enabled && config::steam.force_resolution && !_app.steam_id.empty()) {
         const auto profile = config::steam.resolution_profile == "auto" ?
                                platf::steam::resolution::detect_profile(_app.steam_install_dir) :
@@ -520,23 +543,45 @@ namespace proc {
       boost::filesystem::path working_dir = _app.working_dir.empty() ?
                                               find_working_directory(launch_command, _env) :
                                               boost::filesystem::path(_app.working_dir);
-      if (!_app.steam_id.empty() && !_app.steam_install_dir.empty()) {
+      const auto tracking_dir = _app.battlenet_id.empty() ? _app.steam_install_dir : _app.battlenet_install_dir;
+      if ((!_app.steam_id.empty() || !_app.battlenet_id.empty()) && !tracking_dir.empty()) {
         _steam_tracker.clear();
-        _steam_tracking_active = _steam_tracker.begin(_app.steam_install_dir);
+        _steam_tracking_active = _steam_tracker.begin(tracking_dir);
+#ifdef _WIN32
+        if (!_app.battlenet_id.empty()) {
+          // A game already owned by the user must remain outside our cleanup,
+          // including any children it creates after the stream starts.
+          const auto existing = platf::steam::lifecycle::snapshot_processes();
+          const std::filesystem::path directory(platf::from_utf8(tracking_dir));
+          if (!existing || std::any_of(existing->processes.begin(), existing->processes.end(), [&](const auto &entry) {
+                return !platf::steam::lifecycle::is_protected_steam_process(entry.second) &&
+                       platf::steam::lifecycle::path_is_within(entry.second.executable, directory);
+              })) {
+            _steam_tracking_active = false;
+            _steam_tracker.clear();
+          }
+        }
+#endif
         _steam_tracking_associated = false;
         _steam_tracking_deadline = std::chrono::steady_clock::now() + 15s;
         _steam_last_tracking_poll = {};
         if (!_steam_tracking_active) {
-          BOOST_LOG(warning) << "Steam app " << _app.steam_id
-                             << " could not capture a process baseline; continuing with untrackable detached behavior.";
+          if (!_app.battlenet_id.empty()) {
+            BOOST_LOG(info) << "Battle.net game " << _app.battlenet_id
+                           << " has existing or unqueryable processes; the helper will monitor it without taking ownership.";
+          } else {
+            BOOST_LOG(warning) << "Steam app " << _app.steam_id
+                               << " could not capture a process baseline; continuing with untrackable detached behavior.";
+          }
         } else {
-          BOOST_LOG(debug) << "Steam app " << _app.steam_id
+          BOOST_LOG(debug) << "Game " << (_app.battlenet_id.empty() ? _app.steam_id : _app.battlenet_id)
                            << " process baseline captured for install directory ["
-                           << _app.steam_install_dir << "]";
+                           << tracking_dir << "]";
         }
       }
       BOOST_LOG(info) << "Executing: ["sv << launch_command << "] in ["sv << working_dir << ']';
-      _process = platf::run_command(_app.elevated, true, launch_command, working_dir, _env, _pipe.get(), ec, &_process_group);
+      _process = platf::run_command(_app.battlenet_id.empty() && _app.elevated, _app.battlenet_id.empty(),
+                                    launch_command, working_dir, _env, _pipe.get(), ec, &_process_group);
       if (ec) {
         BOOST_LOG(warning) << "Couldn't run ["sv << _app.cmd << "]: System: "sv << ec.message();
         return -1;
@@ -623,6 +668,12 @@ namespace proc {
 #endif
 
     if (_steam_tracking_active) {
+      if (!_app.battlenet_id.empty() && !_process.running()) {
+        BOOST_LOG(info) << "Battle.net launch helper finished with code " << _process.native_exit_code()
+                        << ". Check launcher login/updates if the game did not start.";
+        terminate();
+        return 0;
+      }
       const auto now = std::chrono::steady_clock::now();
       constexpr auto tracking_poll_interval = 100ms;
       if (_steam_last_tracking_poll.time_since_epoch().count() == 0 || now - _steam_last_tracking_poll >= tracking_poll_interval) {
@@ -630,7 +681,7 @@ namespace proc {
         const auto tracking = _steam_tracker.finish();
         if (tracking.associated()) {
           if (!_steam_tracking_associated) {
-            BOOST_LOG(info) << "Steam app " << _app.steam_id
+            BOOST_LOG(info) << "Tracked game " << (_app.battlenet_id.empty() ? _app.steam_id : _app.battlenet_id)
                             << " associated with " << tracking.tree.processes.size()
                             << " tracked process(es).";
           }
@@ -648,6 +699,15 @@ namespace proc {
 
       if (_steam_tracking_associated) {
         return _app_id;
+      }
+      if (!_app.battlenet_id.empty()) {
+        // The helper enforces its startup timeout and then follows the game.
+        // Unlike Steam's detached fallback, failures must end this session.
+        if (_process.running()) return _app_id;
+        BOOST_LOG(info) << "Battle.net launch helper finished with code " << _process.native_exit_code()
+                        << ". Check launcher login/updates if the game did not start.";
+        terminate();
+        return 0;
       }
       if (now < _steam_tracking_deadline) {
         return _app_id;
@@ -801,6 +861,11 @@ namespace proc {
     placebo = false;
 
     auto remaining_timeout = _app.exit_timeout;
+    if (_steam_tracking_active && !_app.battlenet_id.empty()) {
+      // Web UI launches may have no streaming control thread polling running().
+      // Capture the final association before stopping the newly started game.
+      _steam_tracker.finish();
+    }
     if (!_steam_tracker.tree().empty()) {
       if (!_steam_process_controller) {
         _steam_process_controller = platf::steam::lifecycle::native_process_controller();
@@ -814,7 +879,7 @@ namespace proc {
         *_steam_process_controller,
         steam_stop_options
       );
-      BOOST_LOG(info) << "Steam tracked tree termination requested: TERM=" << stopped.terminate_sent
+      BOOST_LOG(info) << "Tracked game tree termination requested: TERM=" << stopped.terminate_sent
                       << ", KILL=" << stopped.kill_sent << ", skipped=" << stopped.skipped
                       << ", complete=" << (stopped.complete ? "yes" : "no");
       remaining_timeout = 0s;
@@ -826,6 +891,7 @@ namespace proc {
     _steam_last_tracking_poll = {};
 
     if (!immediate) {
+      if (!_app.battlenet_id.empty()) remaining_timeout = 0s;
       terminate_process_group(_process, _process_group, remaining_timeout);
     }
 
@@ -1498,6 +1564,12 @@ namespace proc {
           }
           if (app_node.contains("steam-install-dir") && app_node["steam-install-dir"].is_string()) {
             ctx.steam_install_dir = parse_env_val(this_env, app_node["steam-install-dir"].get<std::string>());
+          }
+          if (app_node.contains("battlenet-id") && app_node["battlenet-id"].is_string()) {
+            ctx.battlenet_id = app_node["battlenet-id"].get<std::string>();
+          }
+          if (app_node.contains("battlenet-install-dir") && app_node["battlenet-install-dir"].is_string()) {
+            ctx.battlenet_install_dir = app_node["battlenet-install-dir"].get<std::string>();
           }
 
           // Calculate a unique application id.

@@ -131,6 +131,7 @@
               <span v-if="app['steam-id']" class="badge bg-secondary ms-2" :title="'Steam App ID: ' + app['steam-id']">
                 <i class="fab fa-steam"></i> Steam
               </span>
+              <span v-if="app['battlenet-id']" class="badge bg-info ms-2">Battle.net</span>
             </td>
             <td v-if="app.uuid" class="text-end">
               <button class="btn btn-primary me-1" :disabled="actionDisabled" @click="editApp(app)">
@@ -156,6 +157,10 @@
         </button>
         <button class="btn btn-outline-info ms-2" @click="syncSteam" :disabled="actionDisabled || steamSyncing">
           <i class="fab fa-steam me-1" :class="{'fa-spin': steamSyncing}"></i> {{ steamSyncing ? ($t('apps.steam_syncing') || 'Sincronizando...') : ($t('apps.sync_steam') || 'Sincronizar Steam') }}
+        </button>
+        <button class="btn btn-outline-info ms-2" @click="syncBattleNet" :disabled="actionDisabled || battlenetSyncing"
+                v-if="apps.some(app => app['battlenet-id'])">
+          {{ battlenetSyncing ? $t('config.battlenet_syncing') : $t('config.battlenet_sync_now') }}
         </button>
         <button class="btn btn-secondary float-end" @click="alphabetizeApps" :disabled="actionDisabled" v-if="!listReordered">
           <i class="fas fa-sort-alpha-up"></i> {{ $t('apps.alphabetize') }}
@@ -586,6 +591,7 @@
         hostName: "",
         hostUUID: "",
         listReordered: false,
+        battlenetSyncing: false,
         steamSyncing: false
       };
     },
@@ -695,6 +701,18 @@
           this.actionDisabled = false;
         })
 
+      },
+      async syncBattleNet() {
+        this.battlenetSyncing = true;
+        try {
+          const response = await fetch('./api/battlenet/force_sync', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'
+          });
+          const data = await response.json();
+          if (!response.ok || !data.status) throw new Error(data.error || 'Battle.net synchronization failed');
+          await this.loadApps();
+        } catch (error) { alert(error.message); }
+        finally { this.battlenetSyncing = false; }
       },
       async syncSteam() {
         this.steamSyncing = true;

@@ -1113,6 +1113,7 @@ namespace confighttp {
       try {
         auto vars = config::parse_config(config_stream.str());
         config::apply_steam(vars);
+        config::apply_battlenet(vars);
       } catch (...) {}
       output_tree["status"] = true;
       send_response(response, output_tree);
@@ -1602,6 +1603,8 @@ namespace confighttp {
     server.resource["^/api/steam/games$"]["GET"] = getSteamGames;
     server.resource["^/api/steam/force_sync$"]["POST"] = postSteamForceSync;
     server.resource["^/api/steam/launch$"]["POST"] = postSteamLaunch;
+    server.resource["^/api/battlenet/status$"]["GET"] = getBattleNetStatus;
+    server.resource["^/api/battlenet/force_sync$"]["POST"] = postBattleNetSync;
     server.resource["^/images/apollo.ico$"]["GET"] = getFaviconImage;
     server.resource["^/images/logo-apollo-45.png$"]["GET"] = getApolloLogoImage;
     server.resource["^/assets\\/.+$"]["GET"] = getNodeModules;

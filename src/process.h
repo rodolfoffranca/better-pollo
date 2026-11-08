@@ -102,6 +102,8 @@ namespace proc {
     std::chrono::seconds exit_timeout;
     std::string steam_id;
     std::string steam_install_dir;
+    std::string battlenet_id;
+    std::string battlenet_install_dir;
   };
 
   class proc_t {

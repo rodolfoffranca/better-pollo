@@ -66,7 +66,12 @@ namespace {
     return name == "steam" || name == "steam.exe" || name == "steamwebhelper" ||
            name == "steamwebhelper.exe" || name == "steamservice" ||
            name == "steamservice.exe" || name == "steam-runtime" ||
-           name == "steam-runtime-sniper" || name == "steam-launch-wrapper";
+           name == "steam-runtime-sniper" || name == "steam-launch-wrapper" ||
+           name == "battle.net.exe" || name == "battle.net launcher.exe" || name == "agent.exe" ||
+           name == "battle.net helper.exe" || name == "blizzarderror.exe" ||
+           name == "sc2.exe" || name == "sc2switcher.exe" || name == "sc2switcher_x64.exe" ||
+           name == "heroesswitcher.exe" || name == "heroesswitcher_x64.exe" ||
+           name == "warcraft iii launcher.exe";
   }
 
   bool looks_like_compatibility_runtime(const process_info &process) {

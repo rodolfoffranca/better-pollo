@@ -29,7 +29,7 @@
       <ul class="nav nav-tabs">
         <li class="nav-item" v-for="tab in tabs" :key="tab.id">
           <a class="nav-link" :class="{'active': tab.id === currentTab}" href="#"
-            @click="currentTab = tab.id">{{tab.name}}</a>
+            @click="currentTab = tab.id">{{ tab.id === 'library' ? $t('config.library') : tab.name }}</a>
         </li>
       </ul>
 
@@ -73,12 +73,7 @@
         :platform="platform">
       </files>
 
-      <!-- Steam Tab -->
-      <steam
-        v-if="currentTab === 'steam'"
-        :config="config"
-        :platform="platform">
-      </steam>
+      <library v-if="currentTab === 'library'" :config="config" :platform="platform"></library>
 
       <!-- Advanced Tab -->
       <advanced
@@ -117,7 +112,7 @@
   import Inputs from './configs/tabs/Inputs.vue'
   import Network from './configs/tabs/Network.vue'
   import Files from './configs/tabs/Files.vue'
-  import Steam from './configs/tabs/Steam.vue'
+  import Library from './configs/tabs/Library.vue'
   import Advanced from './configs/tabs/Advanced.vue'
   import AudioVideo from './configs/tabs/AudioVideo.vue'
   import ContainerEncoders from './configs/tabs/ContainerEncoders.vue'
@@ -132,7 +127,7 @@
       Inputs,
       Network,
       Files,
-      Steam,
+      Library,
       Advanced,
       // They will be accessible via audio-video, container-encoders only.
       AudioVideo,
@@ -251,8 +246,8 @@
             },
           },
           {
-            id: "steam",
-            name: "Steam",
+            id: "library",
+            name: "Library",
             options: {
               "steam_enabled": "disabled",
               "steam_force_resolution": "disabled",
@@ -263,6 +258,11 @@
               "steam_recent_max_age_days": 30,
               "steam_autosync_remove_uninstalled": "enabled",
               "steam_include_tools": "disabled",
+              "battlenet_enabled": "disabled",
+              "battlenet_auto_sync": "disabled",
+              "battlenet_start_minimized": "enabled",
+              "battlenet_remove_uninstalled": "enabled",
+              "battlenet_launch_timeout": 60,
             },
           },
           {
@@ -368,12 +368,12 @@
           }
           if (this.platform === "linux") {
             this.tabs = this.tabs.filter((el) => {
-              return el.id !== "amd" && el.id !== "qsv" && el.id !== "vt";
+              return el.id !== "amd" && el.id !== "qsv" && el.id !== "vt" && el.id !== "battlenet";
             });
           }
           if (this.platform === "macos") {
             this.tabs = this.tabs.filter((el) => {
-              return el.id !== "amd" && el.id !== "nv" && el.id !== "qsv" && el.id !== "vaapi";
+              return el.id !== "amd" && el.id !== "nv" && el.id !== "qsv" && el.id !== "vaapi" && el.id !== "battlenet";
             });
           }
 
