@@ -1,209 +1,146 @@
-# Apollo
+# Better Pollo
 
-Apollo is a self-hosted desktop stream host for [Artemis(Moonlight Noir)](https://github.com/ClassicOldSong/moonlight-android). Offering low latency, native client resolution, cloud gaming server capabilities with support for AMD, Intel, and Nvidia GPUs for hardware encoding. Software encoding is also available. A web UI is provided to allow configuration and client pairing from your favorite web browser. Pair from the local server or any mobile device.
+Fork do [Apollo](https://github.com/ClassicOldSong/Apollo) com sincronização da biblioteca Steam, melhorias de estabilidade e documentação em português brasileiro.
 
-Major features:
+O Better Pollo transmite a área de trabalho e jogos do seu computador para clientes como o [Artemis](https://github.com/ClassicOldSong/moonlight-android). Ele mantém os recursos do Apollo, incluindo monitor virtual com SudoVDA, permissões por dispositivo e codificação de vídeo por hardware.
 
-- [x] Built-in Virtual Display with HDR support that matches the resolution/framerate config of your client automatically
-- [x] Permission management for clients
-- [x] Clipboard sync
-- [x] Commands for client connection/disconnection (checkout [Auto pause/resume games](https://github.com/ClassicOldSong/Apollo/wiki/Auto-pause-resume-games))
-- [x] Input only mode
+Este fork é mantido por [rodolfoffranca](https://github.com/rodolfoffranca). Sua base é o Apollo, derivado do [Sunshine](https://github.com/LizardByte/Sunshine), e a integração Steam foi adaptada do [Vibepollo, de Nonary](https://github.com/Nonary/Vibepollo). Os créditos e o histórico dos projetos de origem são preservados.
 
-## Usage
+## O que este fork acrescenta
 
-Refer to LizardByte's documentation hosted on [Read the Docs](https://docs.lizardbyte.dev/projects/sunshine) for now.
+- Descoberta de jogos instalados nas bibliotecas locais da Steam.
+- Sincronização manual e automática da biblioteca com a lista de aplicativos do Apollo.
+- Seleção entre todos os jogos instalados ou apenas os jogos recentes.
+- Filtros de exclusão e opção para incluir ferramentas da Steam.
+- Importação e preparação de capas compatíveis com os clientes.
+- Acompanhamento dos processos dos jogos Steam para gerenciar o fim da sessão.
+- Atualização da biblioteca sem substituir o gerenciador de processos nem apagar o estado da sessão e do monitor virtual.
+- Proteção de acessos simultâneos à biblioteca e ao ciclo de execução dos aplicativos.
+- Empacotamento completo do SudoVDA, com verificação dos arquivos necessários antes da instalação do driver.
+- Encerramento sem tentativas repetidas de reabrir o driver durante a limpeza da sessão.
 
-Currently Virtual Display support is Windows only, Linux support is planned and will be implemented in the future.
+As alterações deste fork foram compiladas e verificadas em Windows x64. A base mantém código para outras plataformas, mas essas alterações ainda não foram validadas nelas. O monitor virtual descrito aqui utiliza SudoVDA no Windows.
 
-## About Permission System
+## Começar a usar
 
-Check out the [Wiki](https://github.com/ClassicOldSong/Apollo/wiki/Permission-System)
+1. Instale uma compilação deste fork no computador que executará os jogos. No Windows, execute o instalador como administrador para permitir a instalação do serviço e do SudoVDA.
+2. Abra a interface de configuração em [https://localhost:47990](https://localhost:47990), considerando a porta padrão, e crie suas credenciais locais.
+3. Abra o Artemis no dispositivo cliente e faça o pareamento com o computador.
+4. Confira as permissões do cliente na interface web, incluindo iniciar aplicativos e usar teclado, mouse e controle, conforme necessário.
+5. Configure a integração Steam e atualize a lista de aplicativos no cliente.
 
-> [!NOTE]
-> The **FIRST** client paired with Apollo will be granted with FULL permissions, then other newly paired clients will only be granted with `View Streams` and `List Apps` permission. If you encounter `Permission Denied` error when trying to launch any app, go check the permission for that device and grant `Launch Apps` permission. The same applies to the situation when you find that you can't move mouse or type with keyboard on newly paired clients, grant the corresponding client `Mouse Input` and `Keyboard Input` permissions.
+O nome Apollo ainda aparece no instalador, no serviço e em partes da interface. Better Pollo identifica este fork; a identidade interna do aplicativo foi preservada nesta etapa.
 
-## About Virtual Display
+Para obter o código, use este repositório. Consulte a página de [Releases do Better Pollo](https://github.com/rodolfoffranca/better-pollo/releases) para verificar a disponibilidade de binários. Os instaladores do Apollo original não incluem as alterações específicas deste fork.
 
-> [!WARNING]
-> ***It is highly recommend to remove any other virtual display solutions from your system and Apollo/Sunshine config, to reduce confusions and compatibility issues.***
+## Sincronização da Steam
 
-> [!NOTE]
-> **TL;DR** Just treat your Artemis/Moonlight client like a dedicated PnP monitor with Apollo.
+Com a Steam e os jogos instalados no computador host:
 
-Apollo uses SudoVDA for virtual display. It features auto resolution and framerate matching for your Artemis/Moonlight clients. The virtual display is created upon the stream starts and removed once the app quits. **If you do not see a new virtual display added or removed when the stream starts or stops, there may be a driver misconfiguration, or another persistent virtual display might still be active.**
+1. Acesse **Configurações → Steam** na interface web.
+2. Ative **Habilitar Integração com a Steam**.
+3. Para acompanhar mudanças automaticamente, ative **Sincronização Automática em Segundo Plano**. A verificação ocorre a cada 30 segundos.
+4. Ative **Sincronizar Todos os Jogos Instalados** ou configure a quantidade e a idade máxima dos jogos recentes.
+5. Salve as configurações antes de iniciar uma sincronização manual.
+6. Use **Sincronizar Biblioteca Steam Agora**, na aba Steam, ou **Sincronizar Steam**, na página de aplicativos.
+7. Atualize a lista de aplicativos no cliente para visualizar os jogos importados.
 
-The virtual display works just like any physically attached monitors with SudoVDA, there's completely no need for a super complicated solution to "fix" resolution configurations for your devices. Unlike all other solutions that reuses one identity or generate a random one each time for any virtual display sessions, **Apollo assigns a fixed identity for each Artemis/Moonlight client, so your display configuration will be automatically remembered and managed by Windows natively.**
+A descoberta usa a instalação e os arquivos locais da Steam. Não é necessário informar a senha da conta Steam ao Better Pollo. O launcher continua responsável pela autenticação e pela inicialização dos jogos. As capas podem vir do cache local ou ser obtidas pela rede.
 
-## Configuration for dual GPU laptops
+A remoção automática atua sobre entradas gerenciadas pela sincronização; os atalhos adicionados manualmente mantêm suas configurações de inicialização. No modo de jogos recentes, um título pode sair da lista quando deixa de atender aos filtros, mesmo continuando instalado.
 
-Apollo supports dual GPUs seamlessly.
+## Monitor virtual e SudoVDA
 
-If you want to use your dGPU, just set the `Adapter Name` to your dGPU and enable `Headless mode` in `Audio/Video` tab, save and restart your computer. No dummy plug is needed any more, the image will be rendered and encoded directly from your dGPU.
+O monitor virtual acompanha a resolução e a taxa de atualização solicitadas pelo cliente. Isso configura o monitor da sessão; a resolução interna de cada jogo ainda depende das opções do próprio jogo.
 
-## About HDR
+O pacote Windows inclui `SudoVDA.dll`, `nefconc.exe`, o INF, o catálogo e o certificado correspondentes. Os binários foram recuperados, sem modificações, do instalador oficial do Apollo. Sua origem e seus hashes estão documentados em [BINARIES.md](src_assets/windows/drivers/sudovda/BINARIES.md).
 
-HDR starts supporting from Windows 11 23H2 and generally supported on 24H2. Some systems might not have HDR toggle on 23H2 and you just need to upgrade to 24H2. Any system lower than 23H2/Windows 10 will not have HDR option available.
+Se o monitor virtual não estiver disponível, confira a instalação do SudoVDA e os registros do Apollo. Em uma distribuição portátil, o script `drivers/sudovda/install.bat` precisa ser executado como administrador. Faça uma cópia da pasta `config` antes de atualizar uma instalação existente.
 
-> [!NOTE]
-> The below section is written for professional media workers. It doesn't stop you from enabling HDR if you know what you're doing and have deep understanding about how HDR works.
->
-> Apollo and SudoVDA can handle HDR just fine like any other streaming solutions.
->
-> If you have had good experience with HDR previously, you can safely ignore this section.
->
-> If you're curious, read on, but don't blame Apollo for poor HDR support.
+## Compilar no Windows
 
-Whether HDR streaming looks good, it depends completely on your client.
+Use o ambiente **MSYS2 UCRT64**, com o compilador, o CMake, o Ninja, o NSIS e as dependências descritas no [guia de compilação herdado](docs/building.md). Instale o Node.js oficial separadamente e deixe `node` e `npm` disponíveis no `PATH`.
 
-In short, ICC color correction should be totally useless while streaming HDR. It's your client's job to get HDR content displayed right, not the host. But in fact, it does affect the captured video stream and reflect changes on devices that can handle HDR correctly. On other devices that can't, the info is not respected at all.
+Além das dependências da base, a preparação de capas deste fork utiliza PNG, JPEG e WebP:
 
-It's very complicated to explain why HDR is a total mess, and why enabling HDR makes the image appear dark/yellow. If it's your first time got HDR streaming working, and thinks HDR looks awful, you're right, but that's not Apollo's fault, it's your device that tone mapped SDR content to the maximum of the capability of its screen, there's no headroom for anything beyond that actual peak brightness for HDR. For details, please take a look [here](https://github.com/ClassicOldSong/Apollo/issues/164).
-
-For client devices, usually Apple products that have HDR capability can be trusted to have good results, other than that, your luck depends.
-
-<details>
-<summary>DEPRECATION ALERT</summary>
-
-Enabling HDR is **generally not recommended** with **ANY streaming solutions** at this moment, probably in the long term. The issue with **HDR itself** is huge, with loads of semi-incompatible standards, and massive variance between device configurations and capabilities. Game support for HDR is still choppy.
-
-SDR actually provides much more stable color accuracy, and are widely supported throughout most devices you can imagine. For games, art style can easily overcome the shortcoming with no HDR, and SDR has pretty standard workflows to ensure their visual performance. So HDR isn't *that* important in most of the cases.
-
-</details>
-
-## How to run multiple instances of Apollo for multiple virtual displays
-
-Follow the instructions in the [Wiki](https://github.com/ClassicOldSong/Apollo/wiki/How-to-start-multiple-instances-of-Apollo).
-
-## FAQ
-Moved to [WiKi](https://github.com/ClassicOldSong/Apollo/wiki/FAQ)
-
-## Stuttering Clinic
-Here're some common causes and solutions for stutters: [WiKi](https://github.com/ClassicOldSong/Apollo/wiki/Stuttering-Clinic).
-
-## Device specific setups
-- Pixel devices might not be able to use native resolution:
-  - Change the device resolution to Max: https://github.com/ClassicOldSong/Apollo/issues/700
-
-## System Requirements
-
-> **Warning**: This table is a work in progress. Do not purchase hardware based on this.
-
-**Minimum Requirements**
-
-| **Component** | **Description** |
-|---------------|-----------------|
-| GPU           | AMD: VCE 1.0 or higher, see: [obs-amd hardware support](https://github.com/obsproject/obs-amd-encoder/wiki/Hardware-Support) |
-|               | Intel: VAAPI-compatible, see: [VAAPI hardware support](https://www.intel.com/content/www/us/en/developer/articles/technical/linuxmedia-vaapi.html) |
-|               | Nvidia: NVENC enabled cards, see: [nvenc support matrix](https://developer.nvidia.com/video-encode-and-decode-gpu-support-matrix-new) |
-| CPU           | AMD: Ryzen 3 or higher |
-|               | Intel: Core i3 or higher |
-| RAM           | 4GB or more |
-| OS            | Windows: 10+ (Windows Server requires [manual installation](https://github.com/nefarius/ViGEmBus/issues/153) for gamepad support) |
-|               | macOS: 12+ |
-|               | Linux/Debian: 11 (bullseye) |
-|               | Linux/Fedora: 39+ |
-|               | Linux/Ubuntu: 22.04+ (jammy) |
-| Network       | Host: 5GHz, 802.11ac |
-|               | Client: 5GHz, 802.11ac |
-
-**4k Suggestions**
-
-| **Component** | **Description** |
-|---------------|-----------------|
-| GPU           | AMD: Video Coding Engine 3.1 or higher |
-|               | Intel: HD Graphics 510 or higher |
-|               | Nvidia: GeForce GTX 1080 or higher |
-| CPU           | AMD: Ryzen 5 or higher |
-|               | Intel: Core i5 or higher |
-| Network       | Host: CAT5e ethernet or better |
-|               | Client: CAT5e ethernet or better |
-
-**HDR Suggestions**
-
-| **Component** | **Description** |
-|---------------|-----------------|
-| GPU           | AMD: Video Coding Engine 3.4 or higher |
-|               | Intel: UHD Graphics 730 or higher |
-|               | Nvidia: Pascal-based GPU (GTX 10-series) or higher |
-| CPU           | AMD: todo |
-|               | Intel: todo |
-| Network       | Host: CAT5e ethernet or better |
-|               | Client: CAT5e ethernet or better |
-
-## Integrations
-
-SudoVDA: Virtual Display Adapter Driver used in Apollo
-
-[Artemis](https://github.com/ClassicOldSong/moonlight-android): Integrated Virtual Display options control from client side
-
-**NOTE**: Artemis currently supports Android only. Other platforms will come later.
-
-## Support
-
-Currently support is only provided via GitHub Issues/Discussions.
-
-No real time chat support will ever be provided for Apollo and Artemis. Including but not limited to:
-
-- Discord
-- Telegram
-- Whatsapp
-- QQ
-- WeChat 
-
-> When there's a chat, there're dramas. -- Confucius
-
-## Downloads
-
-### Direct Download
-
-**Recommended**
-
-[Releases](https://github.com/ClassicOldSong/Apollo/releases)
-
-### WinGet
-
-**Note:** Community maintained
-
-In an elevated PowerShell window, run
-
-```pwsh
-winget install ClassicOldSong.Apollo
-
+```bash
+pacman -S --needed mingw-w64-ucrt-x86_64-libpng mingw-w64-ucrt-x86_64-libjpeg-turbo mingw-w64-ucrt-x86_64-libwebp
 ```
 
-You'll need WinGet installed first.
+Clone o repositório com os submódulos:
 
-### Chocolatey
-
-**Note:** Community maintained
-
-You can also install the apollo streaming server with chocolatey.
-
-Install Chocolatey if you don't have it, then run the following command in an elevated PowerShell/CMD window:
-
-```pwsh
-choco upgrade apollo -y 
+```bash
+git clone --recurse-submodules https://github.com/rodolfoffranca/better-pollo.git
+cd better-pollo
 ```
 
-Same command can be used to upgrade, add to a scheduled task to automate updates.
+Para um clone já existente:
 
-See more details on the chocolatey package [here](https://community.chocolatey.org/packages/apollo)
+```bash
+git submodule update --init --recursive
+```
 
-## Disclaimer
+Configure e compile:
 
-I got kicked from Moonlight and Sunshine's Discord server and banned from Sunshine's GitHub repo literally for helping people out.
+```bash
+cmake -S . -B cmake-build-release -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build cmake-build-release --parallel 3
+```
 
-This is what I got for finding a bug, opened an issue, getting no response, troubleshoot myself, fixed the issue myself, shared it by PR to the main repo hoping my efforts can help someone else during the maintenance gap.
+Na primeira configuração, o CMake pode baixar dependências. A compilação padrão também prepara a interface web.
 
-Yes, I'm going away. [Apollo](https://github.com/ClassicOldSong/Apollo) and [Artemis(Moonlight Noir)](https://github.com/ClassicOldSong/moonlight-android) will no longer be compatible with OG Sunshine and OG Moonlight eventually, but they'll work even better with much more carefully designed features.
+Gere o instalador Windows:
 
-The Moonlight repo had stayed silent for 5 months, with nobody actually responding to issues, and people are getting totally no help besides the limited FAQ in their Discord server. I tried to answer issues and questions, solve problems within my ability but I got kicked out just for helping others.
+```bash
+cpack --config cmake-build-release/CPackConfig.cmake -G NSIS
+```
 
-**PRs for feature improvements are welcomed here unlike the main repo, your ideas are more likely to be appreciated and your efforts are actually being respected. We welcome people who can and willing to share their efforts, helping yourselves and other people in need.**
+Os artefatos são gerados em `cmake-build-release/cpack_artifacts`. O executável e o instalador mantêm o nome Apollo. O empacotamento é interrompido se os arquivos obrigatórios do SudoVDA estiverem ausentes.
 
-**Update**: They have contacted me and apologized for this incident, but the fact it **happened** still motivated me to start my own fork.
+## Verificação das alterações
 
-## License
+Esta versão foi verificada com:
 
-GPLv3
+- Compilação de produção para Windows x64 e geração do instalador NSIS.
+- Cinco testes de regressão para preservação do estado da sessão, manutenção de uma sessão ativa de entrada, cópias independentes da lista de aplicativos, leituras concorrentes e falhas de gravação.
+- Inicialização de uma instância de teste, sincronização real da Steam e 80 consultas autenticadas à biblioteca durante a sincronização.
+- Conferência dos arquivos incluídos no instalador e das assinaturas dos binários do driver.
+- Validação de uso da instalação corrigida pelo mantenedor deste fork.
+
+Os testes de regressão estão em [test_process_catalog.cpp](tests/unit/test_process_catalog.cpp) e integram a suíte GoogleTest da base, habilitada pela opção CMake `BUILD_TESTS`.
+
+## Próximas melhorias em avaliação
+
+- Argumentos de inicialização por jogo, preenchidos com a resolução da sessão quando o jogo oferecer suporte.
+- Sincronização dos jogos instalados da Battle.net.
+
+Esses dois recursos ainda não estão implementados nesta versão.
+
+## Créditos e projetos de origem
+
+| Projeto | Participação |
+| --- | --- |
+| [Apollo — ClassicOldSong e colaboradores](https://github.com/ClassicOldSong/Apollo) | Base direta deste fork, recursos de streaming, permissões e integração com monitor virtual. |
+| [Sunshine — LizardByte e colaboradores](https://github.com/LizardByte/Sunshine) | Projeto do qual o Apollo deriva e origem de grande parte da infraestrutura de streaming. |
+| [Vibepollo — Nonary e colaboradores](https://github.com/Nonary/Vibepollo) | Origem da integração Steam adaptada para este fork. |
+| [Artemis — ClassicOldSong e colaboradores](https://github.com/ClassicOldSong/moonlight-android) | Cliente com recursos integrados ao Apollo. |
+| SudoVDA — SudoMaker | Driver de monitor virtual utilizado pelo Apollo no Windows. Consulte a [procedência dos binários](src_assets/windows/drivers/sudovda/BINARIES.md). |
+| [Moonlight e colaboradores](https://github.com/moonlight-stream) | Ecossistema de clientes de streaming que faz parte da origem do projeto. |
+
+Obrigado aos autores e colaboradores desses projetos. O Better Pollo é mantido de forma independente e não é uma distribuição oficial do Apollo, Sunshine ou Vibepollo. As marcas citadas pertencem aos respectivos titulares.
+
+O [README original do Apollo](docs/README.apollo.md) foi preservado para consulta, incluindo os créditos, links e orientações da base.
+
+## Documentação e contribuições
+
+- [Documentação da base Sunshine](https://docs.lizardbyte.dev/projects/sunshine)
+- [Wiki do Apollo](https://github.com/ClassicOldSong/Apollo/wiki)
+- [Permissões dos dispositivos](https://github.com/ClassicOldSong/Apollo/wiki/Permission-System)
+- [Guia de contribuição](.github/CONTRIBUTING.md)
+- [Issues deste fork](https://github.com/rodolfoffranca/better-pollo/issues)
+
+Ao relatar um problema neste fork, inclua a versão ou o commit utilizado, o sistema operacional, a GPU, o cliente e os registros relevantes. Remova informações pessoais dos registros antes de publicá-los.
+
+## Licença
+
+O código do projeto mantém a licença **GNU GPL v3** da base. Consulte [LICENSE](LICENSE) e [NOTICE](NOTICE). Componentes e dependências de terceiros mantêm suas próprias licenças e avisos.
